@@ -1,0 +1,52 @@
+name: Materialize Travel Animator
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/materialize-travel-animator.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download attached source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p travel-animator/{css,js,tools}
+          curl -fsSL https://paste.rs/CCknF -o travel-animator/index.html
+          curl -fsSL https://paste.rs/dsnG2 -o travel-animator/css/style.css
+          curl -fsSL https://paste.rs/LRQcV -o travel-animator/js/app.js
+          curl -fsSL https://paste.c-net.org/MaliceJogger -o travel-animator/js/land.js
+          curl -fsSL https://paste.c-net.org/CouchSticker -o travel-animator/js/countries.js
+          curl -fsSL https://paste.rs/ohyhv -o travel-animator/js/states-us.js
+          curl -fsSL https://paste.rs/fO73x -o travel-animator/tools/build-geo.js
+          curl -fsSL https://paste.rs/IdUpl -o travel-animator/serve.js
+          curl -fsSL https://paste.rs/UMvOq -o travel-animator/README.md
+      - name: Validate snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(wc -c < travel-animator/index.html)" -eq 9682
+          test "$(wc -c < travel-animator/css/style.css)" -eq 13635
+          test "$(wc -c < travel-animator/js/app.js)" -eq 76139
+          test "$(wc -c < travel-animator/js/land.js)" -eq 122371
+          test "$(wc -c < travel-animator/js/countries.js)" -eq 177612
+          test "$(wc -c < travel-animator/js/states-us.js)" -eq 63937
+          node --check travel-animator/js/app.js
+          node --check travel-animator/js/land.js
+          node --check travel-animator/js/countries.js
+          node --check travel-animator/js/states-us.js
+          node --check travel-animator/tools/build-geo.js
+          node --check travel-animator/serve.js
+      - name: Commit static application
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add travel-animator
+          git diff --cached --quiet && exit 0
+          git commit -m "Materialize Travel Animator static source"
+          git push
