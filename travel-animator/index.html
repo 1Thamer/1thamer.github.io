@@ -1,1 +1,174 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Travel Animator — Thamer Dev</title><style>html,body{height:100%;margin:0;background:#080b12;color:#eaf0fb;font:15px system-ui}body{display:grid;place-items:center}.card{text-align:center;padding:28px;border:1px solid #ffffff22;border-radius:16px;background:#121724cc}.spin{width:34px;height:34px;margin:0 auto 15px;border:3px solid #ffffff26;border-top-color:#4fc3f7;border-radius:50%;animation:s .8s linear infinite}@keyframes s{to{transform:rotate(360deg)}}small{color:#9aa7bd}</style></head><body><div class="card"><div class="spin"></div><b>Travel Animator</b><br><small>Loading application…</small></div><script>(async()=>{const b='https://bumpy-facts-jog.loca.lt/';const f=['style.css','land.js','countries.js','states-us.js','app.js'];try{const d=await Promise.all(f.map(async x=>{const r=await fetch(b+x);if(!r.ok)throw Error(x+' '+r.status);return r.text()}));let h=await(await fetch(b+'index.html')).text();h=h.replace('<link rel="stylesheet" href="css/style.css">','<style>'+d[0]+'</style>');for(let i=1;i<5;i++)h=h.replace('<script src="js/'+f[i]+'"></script>','<script>'+d[i].replaceAll('</script>','<\\/script>')+'<\/script>');document.open();document.write(h);document.close()}catch(e){document.querySelector('.card').innerHTML='<b>Could not load Travel Animator</b><br><small>'+e.message+'</small>'}})();</script></body></html>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Travel Animator — Thamer Dev</title>
+<meta name="description" content="Draw a multi-stop trip on a real world map, animate it with plane, car and boat models, and export a WebM video — 100% in your browser, no keys, no accounts.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✈️</text></svg>">
+</head>
+<body>
+
+<canvas id="map" aria-label="Interactive trip map"></canvas>
+
+<!-- ───────────────────────── top bar ───────────────────────── -->
+<header class="topbar glass" id="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M2 16.5 21 4l-4.2 15.5-4.6-4.2-2.6 3.4-.6-4.6z"/></svg>
+    </div>
+    <div class="brand-text">
+      <b>Travel&nbsp;Animator</b>
+      <span>Thamer Dev</span>
+    </div>
+  </div>
+
+  <div class="search-wrap" id="searchWrap">
+    <svg class="search-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+    <input id="search" type="text" placeholder="Search places…  (/)" autocomplete="off" spellcheck="false" aria-label="Search places">
+    <button class="search-clear" id="searchClear" title="Clear" aria-label="Clear search">×</button>
+    <div class="results" id="results" role="listbox"></div>
+  </div>
+
+  <div class="menu-host">
+    <button class="tbtn" id="styleBtn" title="Basemap style">
+      <svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+      <span id="styleLabel">Dark</span>
+      <svg class="caret" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="menu glass" id="styleMenu"></div>
+  </div>
+
+  <div class="menu-host">
+    <button class="tbtn" id="demoBtn" title="Load a demo trip">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span>Demos</span>
+      <svg class="caret" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="menu glass" id="demoMenu"></div>
+  </div>
+
+  <div class="menu-host">
+    <button class="tbtn" id="tripBtn" title="Save, load and share the trip">
+      <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>
+      <span>Trip</span>
+      <svg class="caret" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="menu glass" id="tripMenu">
+      <button data-trip="share">Copy share link</button>
+      <button data-trip="save">Save trip (.ta.trip)</button>
+      <button data-trip="load">Load trip file…</button>
+      <button data-trip="gpx">Import GPX / KML…</button>
+      <button data-trip="photo">Attach photo to last stop…</button>
+    </div>
+  </div>
+
+  <button class="tbtn icon" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme">
+    <svg viewBox="0 0 24 24" id="themeIco"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+  <button class="tbtn icon" id="helpBtn" title="Help &amp; keyboard shortcuts" aria-label="Help">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a3 3 0 1 1 4 2.8c-.8.3-1.2 1-1.2 1.9"/><circle cx="12" cy="17.2" r=".9" fill="currentColor"/></svg>
+  </button>
+</header>
+
+<!-- ───────────────────────── HUD ───────────────────────── -->
+<aside class="hud glass" id="hud">
+  <div class="hud-row"><span class="k">Stops</span><span class="v" id="hudStops">0</span></div>
+  <div class="hud-row"><span class="k">Distance</span><span class="v" id="hudDist">0 km</span></div>
+  <div class="hud-row"><span class="k">Legs</span><span class="v" id="hudLegs">—</span></div>
+  <div class="hud-visited" id="hudVisited"></div>
+</aside>
+
+<!-- ───────────────────────── zoom stack ───────────────────────── -->
+<div class="zoomstack glass">
+  <button id="zoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+  <div class="zsep"></div>
+  <button id="zoomOut" title="Zoom out" aria-label="Zoom out">−</button>
+  <div class="zsep"></div>
+  <button id="fitBtn" title="Fit trip to view" aria-label="Fit trip">⛶</button>
+</div>
+
+<div class="attrib" id="attrib"></div>
+
+<!-- ───────────────────────── bottom dock ───────────────────────── -->
+<footer class="dock glass" id="dock">
+  <button class="play" id="playBtn" title="Play / pause (Space)" aria-label="Play">
+    <svg id="playIco" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
+  </button>
+
+  <div class="scrub">
+    <div class="scrub-top">
+      <span id="tCur">0:00</span>
+      <span class="scrub-mid" id="tMeta">Draw a route to begin</span>
+      <span id="tTot">0:00</span>
+    </div>
+    <div class="track" id="track" role="slider" aria-label="Timeline" tabindex="0">
+      <div class="track-fill" id="trackFill"></div>
+      <div class="ticks" id="ticks"></div>
+      <div class="knob" id="knob"></div>
+    </div>
+  </div>
+
+  <div class="dock-tools">
+    <button class="dbtn" id="drawBtn" title="Draw route: click the map to add stops (D)">
+      <svg viewBox="0 0 24 24"><path d="M4 19s3-9 8-9 8 3 8 3"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="13" r="2"/></svg>
+      <span>Draw route</span>
+    </button>
+
+    <div class="seg" id="modeSeg" role="group" aria-label="Transport mode">
+      <button data-mode="plane" class="on" title="Plane leg (1)"><svg viewBox="0 0 24 24"><path d="M2 16.5 21 4l-4.2 15.5-4.6-4.2-2.6 3.4-.6-4.6z"/></svg></button>
+      <button data-mode="car" title="Car leg (2)"><svg viewBox="0 0 24 24"><path d="M5 16h14M4 16v-3l2-5h12l2 5v3"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/></svg></button>
+      <button data-mode="boat" title="Boat leg (3)"><svg viewBox="0 0 24 24"><path d="M3 17c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/><path d="M5 13h14l-2-5H7z"/><path d="M12 8V4"/></svg></button>
+    </div>
+
+    <button class="dbtn icon" id="undoBtn" title="Undo last stop (U)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12H8"/></svg></button>
+    <button class="dbtn icon" id="clearBtn" title="Clear trip"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></button>
+    <button class="dbtn" id="speedBtn" title="Playback speed"><span id="speedLbl">1×</span></button>
+    <button class="dbtn" id="autozoomBtn" title="Auto-fit view when stops change"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Auto</span></button>
+    <button class="dbtn on" id="followBtn" title="Cinematic camera follow (F)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg><span>Follow</span></button>
+    <button class="dbtn rec" id="recBtn" title="Record the animation to WebM"><span class="dot"></span><span id="recLbl">Record</span></button>
+  </div>
+</footer>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- ───────────────────────── overlays ───────────────────────── -->
+<div class="overlay" id="intro" hidden>
+  <div class="sheet glass">
+    <h2>Animate your journey ✈️</h2>
+    <p>Draw a multi-stop trip on a real world map, watch it animate with plane, car and boat models, then export the whole thing as a video — entirely inside your browser. No account, no API keys, nothing uploaded.</p>
+    <ul class="steps">
+      <li><b>1.</b> Hit <em>Draw route</em> and click the map to drop stops — or pick a demo trip.</li>
+      <li><b>2.</b> Switch <em>plane / car / boat</em> before each click to set that leg's transport.</li>
+      <li><b>3.</b> Press <em>Play</em>, then <em>Record</em> to save a .webm video.</li>
+    </ul>
+    <div class="sheet-actions">
+      <button class="primary" id="introGo">Start drawing</button>
+      <button id="introDemo">Load a demo trip</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="help" hidden>
+  <div class="sheet glass">
+    <h2>Help &amp; shortcuts</h2>
+    <div class="kbd-grid" id="kbdGrid"></div>
+    <h3>How it works</h3>
+    <p class="fine">Map tiles, place search and car routing come from free, keyless, CORS-open public services (Esri, OpenStreetMap, OpenTopoMap, Photon/Nominatim, OSRM). The whole map is composited onto a single <code>&lt;canvas&gt;</code> so <code>captureStream()</code> can record it — that is why there is no Leaflet here.</p>
+    <div class="sheet-actions"><button class="primary" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<input type="file" id="fileTrip" accept=".json,.trip,.ta.trip,application/json" hidden>
+<input type="file" id="fileGpx" accept=".gpx,.kml,.xml,text/xml" hidden>
+<input type="file" id="filePhoto" accept="image/*" hidden>
+
+<script src="js/land.js"></script>
+<script src="js/countries.js"></script>
+<script src="js/states-us.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
